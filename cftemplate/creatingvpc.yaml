@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description:
+  Creating VPC
+
+Parameters:
+
+  ClientName:
+    Description: Enter client name whci will be used as the resource identification
+    Type: String
+
+  VPCCidrBlock:
+    Description: Enter ip range for the vpc (x.x.x.x/x)
+    Type: String
+    Default: 10.0.0.0/16
+
+
+Resources:
+  AWSVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'false'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: !Join
+        - ""
+        - - !Ref ClientName
+          - "-VPC"
