@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description:
-  Creating VPC
+  Creating VPC Sydeney Region
 
 Parameters:
 
@@ -14,6 +14,20 @@ Parameters:
     Type: String
     Default: 10.0.0.0/16
 
+  SubnetAZ1:
+    Description: Enter ip range for the subnet availability zone 1 (x.x.x.x/x)
+    Type: String
+    Default: 10.0.1.0/24
+
+  SubnetAZ2:
+    Description: Enter ip range for the subnet availability zone 2 (x.x.x.x/x)
+    Type: String
+    Default: 10.0.2.0/24
+
+  SubnetAZ3:
+    Description: Enter ip range for the subnet availability zone 3 (x.x.x.x/x)
+    Type: String
+    Default: 10.0.3.0/24
 
 Resources:
   AWSVPC:
@@ -29,3 +43,101 @@ Resources:
         - ""
         - - !Ref ClientName
           - "-VPC"
+
+  AWSSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref AWSVPC
+        AvailabilityZone: !Select [0, !GetAZs '']
+        CidrBlock: !Ref SubnetAZ1
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: !Join
+              - ""
+              - - !Ref ClientName
+                - "-PublicSubnet-"
+                - !Select [0, !GetAZs '']
+
+  AWSSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref AWSVPC
+        AvailabilityZone: !Select [1, !GetAZs '']
+        CidrBlock: !Ref SubnetAZ2
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: !Join
+              - ""
+              - - !Ref ClientName
+                - "-PublicSubnet-"
+                -  !Select [1, !GetAZs '']
+
+  AWSSubnet3:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref AWSVPC
+        AvailabilityZone: !Select [2, !GetAZs '']
+        CidrBlock: !Ref SubnetAZ3
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: !Join
+              - ""
+              - - !Ref ClientName
+                - "-PublicSubnet-"
+                -  !Select [2, !GetAZs '']
+
+  AWSIGW:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: !Join
+              - ""
+              - - !Ref ClientName
+                - "-igw"
+
+  AWSIGWAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref AWSIGW
+      VpcId: !Ref AWSVPC
+
+  AWSRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AWSVPC
+      Tags:
+        - Key: Name
+          Value: !Join
+            - ""
+            - - !Ref ClientName
+              - "-rt"
+
+  AWSRoute:
+      Type: AWS::EC2::Route
+      DependsOn: AWSIGWAttach
+      Properties:
+        RouteTableId: !Ref AWSRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref AWSIGW
+
+  AWSSubnet1Associate:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref AWSRouteTable
+      SubnetId: !Ref AWSSubnet1
+
+  AWSSubnet2Associate:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref AWSRouteTable
+      SubnetId: !Ref AWSSubnet2
+
+  AWSSubnet3Associate:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref AWSRouteTable
+      SubnetId: !Ref AWSSubnet3
