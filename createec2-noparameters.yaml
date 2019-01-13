@@ -36,6 +36,26 @@ Resources:
               service httpd start;                                                          # start apache service
               chkconfig httpd on;                                                           # enable apache to start on boot
 
+  AWSEC2InstanceMysql:
+    Type: AWS::EC2::Instance
+
+    Properties:
+      InstanceType: t1.micro
+
+      ImageId: ami-08589eca6dcc9b39c
+      KeyName: test_kp
+
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - "CubeNetworks"
+              - "mysql"
+              - !Ref "AWS::Region"
+
+      SecurityGroups:
+        - !Ref AWSSecurityGroupdb
+
   AWSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -63,6 +83,34 @@ Resources:
             - "-"
             - - "CubeNetworks"
               - "sg-public"
+
+  AWSSecurityGroupdb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: MYSQL-ACCESS
+      GroupDescription: Allow mysql connection over port 3306
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          CidrIp: !Sub '${AWSEC2Instance.PrivateIp}/32'
+
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: icmp
+          FromPort: '8'
+          ToPort: '-1'
+          CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - "CubeNetworks"
+              - "sg-mysql"
 
 Outputs:
   Website:
