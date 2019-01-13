@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description:
+  Creating EC2 Instance in Sydney region using Amazon Linux AMI
+
+Parameters:
+  ClientName:
+    Description: Enter client name whci will be used as the resource identification
+    Type: String
+
+  KeyName:
+    Description: Existing AWS KeyPair to ssh in to EC2 instance
+    Type: AWS::EC2::KeyPair::KeyName
+
+  InstanceType:
+    Description: EC2 Instance types
+    Type: String
+    Default: "t2.micro"
+    AllowedValues: # Listed only few instance types
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+
+Mappings:
+  AWSRegionMap:         # only Syndey region AMI is mapped, if required can map the Amazon Linux AMI for other regions
+    ap-southeast-2:     # Asia Pacific (Sydney)
+      AMI: ami-08589eca6dcc9b39c
+
+Resources:
+  AWSEC2Instance:
+    Type: AWS::EC2::Instance
+
+    Properties:
+      InstanceType: !Ref InstanceType
+
+      ImageId:
+        Fn::FindInMap:
+        - AWSRegionMap
+        - !Ref AWS::Region
+        - AMI
+
+      KeyName: !Ref KeyName
+
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClientName
+              - "webserver"
+              - !Ref "AWS::Region"
+
+      SecurityGroups:
+        - !Ref AWSSecurityGroup
+
+      UserData:
+        Fn::Base64:
+          !Sub |
+              #!/bin/bash -ex
+              yum update -y                                                                 # update the system
+              yum install -y httpd;                                                         # install apache
+              echo "<html>Welcome to Apache Web Server</html>" > /var/www/html/index.html;  # create index.html in /var/www/html/index.html
+              cd /var/www/html;                                                             # change directory to /var/www/html
+              chmod 755 index.html;                                                         # change permession of index.html
+              service httpd start;                                                          # start apache service
+              chkconfig httpd on;                                                           # enable apache to start on boot
+
+  AWSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Public-SSH
+      GroupDescription: Allow ssh connection over port 22
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref ClientName
+              - "sg-public"
+
+Outputs:
+  Website:
+    Description: Home Page of the Website
+    Value: !Sub 'http://${AWSEC2Instance.PublicDnsName}'
